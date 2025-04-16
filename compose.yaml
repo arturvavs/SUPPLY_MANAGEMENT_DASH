@@ -1,0 +1,43 @@
+networks:
+  gestaoavista_net:
+    external: true  # Usa uma rede Docker já existente
+
+volumes:
+  SALDO_RESSUPRIMENTO_DASH-data:
+    driver: local  # Define um volume persistente
+
+services:
+  SALDO_RESSUPRIMENTO_DASH:
+    image: SALDO_RESSUPRIMENTO_DASH:v1
+    container_name: SALDO_RESSUPRIMENTO_DASH
+    build:
+      context: .
+    restart: always
+    ports:
+      - '6013:6013'
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail http://localhost:6013/flask-health-check || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+    command: >
+      uwsgi --http 0.0.0.0:6013 
+            --module app:server 
+            --master 
+            --processes 4 
+            --threads 2 
+            --max-requests 1000 
+            --harakiri 60
+    deploy:
+      resources:
+        limits:
+          memory: 512M  # Limite máximo de memória
+          cpus: "0.5"   # Limite de CPU (meio núcleo)
+        reservations:
+          memory: 256M  # Reserva mínima de memória
+    volumes:
+      - SALDO_RESSUPRIMENTO_DASH-data:/app/data
+    networks:
+      - gestaoavista_net  # Conectando à rede já existente
